@@ -663,6 +663,28 @@
 <div class="loading-overlay" id="loading-overlay">
   <div class="loading-box"><div class="spinner"></div><div class="loading-text" id="loading-text">處理中…</div></div>
 </div>
+
+<!-- 圖片預覽 Modal -->
+<div class="modal-backdrop" id="img-preview-modal" onclick="closeImgPreview()" style="background:rgba(0,0,0,0.85)">
+  <div style="position:relative;max-width:92vw;max-height:88vh;display:flex;flex-direction:column;align-items:center;gap:12px">
+    <div style="display:flex;align-items:center;justify-content:space-between;width:100%;padding:0 4px">
+      <span style="color:white;font-size:13px;font-weight:600" id="img-preview-title">投保資料</span>
+      <div style="display:flex;gap:8px">
+        <a id="img-preview-open" href="#" target="_blank" class="btn btn-ghost btn-sm" style="font-size:12px;background:rgba(255,255,255,0.15);color:white;border-color:rgba(255,255,255,0.3)">🔗 開新分頁</a>
+        <button onclick="closeImgPreview()" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:white;width:32px;height:32px;border-radius:8px;font-size:16px;cursor:pointer">✕</button>
+      </div>
+    </div>
+    <img id="img-preview-img" src="" alt="投保資料"
+      style="max-width:92vw;max-height:78vh;border-radius:10px;object-fit:contain;box-shadow:0 8px 32px rgba(0,0,0,0.5)"
+      onerror="handleImgError()">
+    <div id="img-preview-error" style="display:none;background:white;border-radius:10px;padding:24px 28px;text-align:center;max-width:320px">
+      <div style="font-size:32px;margin-bottom:12px">📄</div>
+      <div style="font-size:14px;font-weight:600;color:#1a1a2e;margin-bottom:8px">無法直接預覽</div>
+      <div style="font-size:12px;color:#4a5568;margin-bottom:14px">此檔案格式需要在 Google Drive 開啟</div>
+      <a id="img-error-open" href="#" target="_blank" class="btn btn-primary" style="text-decoration:none;font-size:13px">🔗 前往 Google Drive 查看</a>
+    </div>
+  </div>
+</div>
 <!-- Mobile Bottom Nav -->
 <div class="bottom-nav-mobile" id="bottom-nav-mobile" style="display:none">
   <div class="bnm-item active" id="bnm-policy" onclick="switchTab('policy')">
@@ -1208,7 +1230,7 @@ function renderPolicyTable() {
     }
     const pno=String(p.policyNo||'—');
     const driveBtnHtml = p.driveLink
-      ? `<a href="${p.driveLink}" target="_blank" class="btn btn-ghost btn-sm" style="font-size:11px;padding:4px 8px;text-decoration:none">📎 查看</a>`
+      ? `<button onclick="openImgPreview('${p.driveLink}','${p.applicant||''}投保資料')" class="btn btn-ghost btn-sm" style="font-size:11px;padding:4px 8px">📎 查看</button>`
       : '<span style="color:var(--ink3);font-size:11px">—</span>';
     html+=`<tr>
       <td class="td-mono">${p.startDate||''}</td>
@@ -1284,7 +1306,7 @@ function renderCarTable() {
       <td>${c.payType||''}</td>
       <td>${habitHtml}</td>
       <td style="color:var(--ink3);font-size:12px;max-width:120px">${c.note||'—'}</td>
-      <td>${c.driveLink?`<a href="${c.driveLink}" target="_blank" class="btn btn-ghost btn-sm" style="font-size:11px;padding:4px 8px;text-decoration:none">📎 查看</a>`:'<span style="color:var(--ink3);font-size:11px">—</span>'}</td>
+      <td>${c.driveLink?`<button onclick="openImgPreview('${c.driveLink}','${c.carNo||''}投保資料')" class="btn btn-ghost btn-sm" style="font-size:11px;padding:4px 8px">📎 查看</button>`:'<span style="color:var(--ink3);font-size:11px">—</span>'}</td>
       <td style="white-space:nowrap">
         <button class="btn btn-ghost btn-sm" onclick="editCar(${c.id})">編輯</button>
         <button class="btn btn-copy btn-sm" onclick="copyCar(${c.id})">複製</button>
@@ -1341,9 +1363,45 @@ function updateDrivePreview(prefix) {
   if (link) {
     preview.style.display = 'block';
     btn.href = link;
+    btn.onclick = (e) => { e.preventDefault(); openImgPreview(link, '投保資料'); };
   } else {
     preview.style.display = 'none';
   }
+}
+
+function getDriveDirectUrl(link) {
+  // Convert sharing URL to direct image URL
+  const match = link.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (match) return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+  return link;
+}
+
+function openImgPreview(link, title) {
+  const directUrl = getDriveDirectUrl(link);
+  const modal = document.getElementById('img-preview-modal');
+  const img = document.getElementById('img-preview-img');
+  const errDiv = document.getElementById('img-preview-error');
+  const titleEl = document.getElementById('img-preview-title');
+  const openBtn = document.getElementById('img-preview-open');
+  const errOpenBtn = document.getElementById('img-error-open');
+
+  titleEl.textContent = title || '投保資料';
+  img.src = directUrl;
+  img.style.display = 'block';
+  errDiv.style.display = 'none';
+  openBtn.href = link;
+  errOpenBtn.href = link;
+  modal.classList.add('open');
+}
+
+function handleImgError() {
+  document.getElementById('img-preview-img').style.display = 'none';
+  document.getElementById('img-preview-error').style.display = 'block';
+}
+
+function closeImgPreview() {
+  document.getElementById('img-preview-modal').classList.remove('open');
+  document.getElementById('img-preview-img').src = '';
 }
 
 async function savePolicy() {
